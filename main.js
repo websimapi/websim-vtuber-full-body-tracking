@@ -87,8 +87,8 @@ function initScene() {
 function loadModel() {
     statusMessage.textContent = "Loading 3D model...";
     
-    // Example using ReadyPlayerMe avatar - replace with your own model URL
-    const modelUrl = 'https://models.readyplayer.me/65a9a298a079119ea43ab2ec.glb';
+    // Example using a more reliable 3D model source
+    const modelUrl = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/Soldier.glb';
     
     const loader = new GLTFLoader();
     loader.load(
@@ -102,6 +102,9 @@ function loadModel() {
                 }
             });
             
+            // Center and scale the model
+            model.position.set(0, 0, 0);
+            model.scale.set(1, 1, 1);
             scene.add(model);
             
             // Store animation mixer if animations exist
@@ -566,10 +569,20 @@ async function startTracking() {
     if (isTracking) return;
     
     try {
+        // Make sure all components are initialized
+        if (!faceLandmarker || !handLandmarker || !poseLandmarker) {
+            await initMediaPipe();
+        }
+        
         isTracking = true;
         startButton.textContent = "Tracking Active";
         startButton.disabled = true;
         statusMessage.textContent = "Tracking active";
+        
+        // Start video if not already playing
+        if (video.paused) {
+            await video.play();
+        }
         
         // Start motion tracking
         trackMotion();
@@ -577,6 +590,7 @@ async function startTracking() {
         console.error('Error starting tracking:', error);
         statusMessage.textContent = "Error starting tracking";
         isTracking = false;
+        startButton.disabled = false;
     }
 }
 
@@ -588,15 +602,19 @@ async function init() {
         initScene();
         animate();
         
+        // Add debug info
+        console.log("Webcam initialized:", video.readyState);
+        console.log("MediaPipe models:", {face: !!faceLandmarker, hand: !!handLandmarker, pose: !!poseLandmarker});
+        console.log("Scene initialized:", !!scene);
+        
         startButton.disabled = false;
         startButton.addEventListener('click', startTracking);
         statusMessage.textContent = "Ready to start tracking";
     } catch (error) {
         console.error('Initialization error:', error);
-        statusMessage.textContent = "Error during initialization";
+        statusMessage.textContent = "Error during initialization: " + error.message;
     }
 }
 
 // Start initialization when page loads
 window.addEventListener('load', init);
-
